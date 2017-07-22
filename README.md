@@ -3,6 +3,6 @@ An Android maps app with google auto complete places api to search and locate pl
 
 Screenshots:
 
-![icon](https://raw.githubusercontent.com/pmathew92/MapsWithPlacesAutoComplete/branch/master/screenshot/screenshot1.png)
+![icon](https://raw.githubusercontent.com/pmathew92/MapsWithPlacesAutoComplete/master/screenshot/screenshot1.png)
 
-![icon](https://raw.githubusercontent.com/pmathew92/MapsWithPlacesAutoComplete/branch/master/screenshot/screenshot2.png)
+![icon](https://raw.githubusercontent.com/pmathew92/MapsWithPlacesAutoComplete/master/screenshot/screenshot2.png)
