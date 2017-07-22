@@ -55,6 +55,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener, AutoCompleteAdapter.PlaceAutoCompleteInterface {
 
@@ -143,32 +144,37 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
+        final Handler handler = new Handler();
         mSearchText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-                if (!s.equals("") && mGoogleApiClient.isConnected()) {
-                    mAdapter.getFilter().filter(s.toString());
-                } else if (!mGoogleApiClient.isConnected()) {
+            public void onTextChanged(final CharSequence s, int start, int before, int count) {
+                if (!s.toString().isEmpty() && mGoogleApiClient.isConnected()) {
+                    handler.removeCallbacksAndMessages(null);
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            mAdapter.getFilter().filter(s.toString());
+                        }
+                    }, 500);
+                } else if (s.toString().isEmpty()) {
+                    handler.removeCallbacksAndMessages(null);
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            mAdapter.getFilter().filter(null);
+                        }
+                    }, 1000);
+                } else {
                     Log.e(TAG, "API  NOT CONNECTED");
                 }
             }
 
             @Override
             public void afterTextChanged(Editable s) {
-                if(s.toString().equals("")){
-                    Handler handler=new Handler();
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                          mAdapter.getFilter().filter(null);
-                        }
-                    },500);
-                }
             }
         });
 
@@ -225,44 +231,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
 
-    @Override
-    public void onPlaceClick(ArrayList<AutoCompleteAdapter.PlaceAutoComplete> mResultList, int position) {
-        if (mResultList != null) {
-            try {
-                final String placeId = String.valueOf(mResultList.get(position).getPlaceId());
 
-                mSearchText.setText("");
-                mAdapter.clearList();
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(mSearchText.getWindowToken(), 0);
-                mSearchText.setCursorVisible(false);
-                PendingResult<PlaceBuffer> placeResult = Places.GeoDataApi.getPlaceById(mGoogleApiClient, placeId);
-                placeResult.setResultCallback(new ResultCallback<PlaceBuffer>() {
-                    @Override
-                    public void onResult(@NonNull PlaceBuffer places) {
-                        if (!places.getStatus().isSuccess()) {
-                            // Request did not complete successfully
-                            Log.e(TAG, "Place query did not complete. Error: " + places.getStatus().toString());
-                            places.release();
-                            return;
-                        }
-                        Place place = places.get(0);
-                        sCameraMoved = false;
-                        mLatitude = place.getLatLng().latitude;
-                        mLongitude = place.getLatLng().longitude;
-                        mPrimaryAddress.setText(place.getName());
-                        mSecondaryAddress.setText(place.getAddress());
-                        mAddressLayout.setVisibility(View.VISIBLE);
-                        loadMap();
-                        places.release();
-                    }
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
-                Log.e(TAG, e.toString());
-            }
-        }
-    }
 
 
     /**
@@ -474,6 +443,45 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         break;
                 }
                 break;
+        }
+    }
+
+    @Override
+    public void onPlaceClick(List<AutoCompleteAdapter.PlaceAutoComplete> mResultList, int position) {
+        if (mResultList != null) {
+            try {
+                final String placeId = String.valueOf(mResultList.get(position).getPlaceId());
+
+                mSearchText.setText("");
+                mAdapter.clearList();
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(mSearchText.getWindowToken(), 0);
+                mSearchText.setCursorVisible(false);
+                PendingResult<PlaceBuffer> placeResult = Places.GeoDataApi.getPlaceById(mGoogleApiClient, placeId);
+                placeResult.setResultCallback(new ResultCallback<PlaceBuffer>() {
+                    @Override
+                    public void onResult(@NonNull PlaceBuffer places) {
+                        if (!places.getStatus().isSuccess()) {
+                            // Request did not complete successfully
+                            Log.e(TAG, "Place query did not complete. Error: " + places.getStatus().toString());
+                            places.release();
+                            return;
+                        }
+                        Place place = places.get(0);
+                        sCameraMoved = false;
+                        mLatitude = place.getLatLng().latitude;
+                        mLongitude = place.getLatLng().longitude;
+                        mPrimaryAddress.setText(place.getName());
+                        mSecondaryAddress.setText(place.getAddress());
+                        mAddressLayout.setVisibility(View.VISIBLE);
+                        loadMap();
+                        places.release();
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.e(TAG, e.toString());
+            }
         }
     }
 

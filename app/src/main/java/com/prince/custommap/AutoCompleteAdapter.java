@@ -22,6 +22,7 @@ import com.google.android.gms.maps.model.LatLngBounds;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
@@ -29,19 +30,19 @@ public class AutoCompleteAdapter extends RecyclerView.Adapter<AutoCompleteAdapte
     private static final String TAG = AutoCompleteAdapter.class.getSimpleName();
 
     public interface PlaceAutoCompleteInterface{
-         void onPlaceClick(ArrayList<PlaceAutoComplete> mResultList, int position);
+        void onPlaceClick(List<PlaceAutoComplete> mResultList, int position);
     }
 
-    private ArrayList<PlaceAutoComplete> mResultList;
-    private Context mContext;
-    private int mLayout;
-    private GoogleApiClient mGoogleApiClient;
-    private AutocompleteFilter mPlaceFilter;
+    private List<PlaceAutoComplete> mResultList=new ArrayList<>();
+    private final Context mContext;
+    private final int mLayout;
+    private final GoogleApiClient mGoogleApiClient;
+    private final AutocompleteFilter mPlaceFilter;
     private LatLngBounds mBounds;
 
-    private PlaceAutoCompleteInterface mPlaceClickInterface;
+    private final PlaceAutoCompleteInterface mPlaceClickInterface;
 
-    public AutoCompleteAdapter(Context mContext,int mLayout,GoogleApiClient mGoogleApiClient,LatLngBounds mBounds,AutocompleteFilter mPlaceFilter,PlaceAutoCompleteInterface mPlaceClickInterface){
+    public AutoCompleteAdapter(Context mContext, int mLayout, GoogleApiClient mGoogleApiClient, LatLngBounds mBounds, AutocompleteFilter mPlaceFilter, PlaceAutoCompleteInterface mPlaceClickInterface){
         this.mContext=mContext;
         this.mLayout=mLayout;
         this.mGoogleApiClient=mGoogleApiClient;
@@ -50,19 +51,27 @@ public class AutoCompleteAdapter extends RecyclerView.Adapter<AutoCompleteAdapte
         this.mPlaceClickInterface=mPlaceClickInterface;
     }
 
+    /**
+     * Setting Bounds for subsequent queries
+     */
+    public void setmBounds(LatLngBounds mBounds){
+        this.mBounds=mBounds;
+    }
+
     /*
    Clear List items
     */
     public void clearList(){
-        if(mResultList!=null && mResultList.size()>0){
+        if(mResultList!=null ){
             mResultList.clear();
         }
         notifyDataSetChanged();
     }
 
     public static class PredictionHolder extends RecyclerView.ViewHolder{
-        private TextView mAddress1,mAddress2;
-        private LinearLayout mPredictionLayout;
+        private final TextView mAddress1;
+        private final TextView mAddress2;
+        private final LinearLayout mPredictionLayout;
         public PredictionHolder(View holder){
             super(holder);
             mAddress1=(TextView)holder.findViewById(R.id.primary_address);
@@ -75,8 +84,9 @@ public class AutoCompleteAdapter extends RecyclerView.Adapter<AutoCompleteAdapte
      * Holder class for query result
      */
     public class PlaceAutoComplete{
-        private CharSequence placeId;
-        private CharSequence placeAddress1,placeAddress2;
+        private final CharSequence placeId;
+        private final CharSequence placeAddress1;
+        private final CharSequence placeAddress2;
 
         public PlaceAutoComplete(CharSequence placeId,CharSequence placeAddress1,CharSequence placeAddress2){
             this.placeId=placeId;
@@ -100,35 +110,30 @@ public class AutoCompleteAdapter extends RecyclerView.Adapter<AutoCompleteAdapte
 
     @Override
     public Filter getFilter() {
-       Filter filter=new Filter() {
-           @Override
-           protected FilterResults performFiltering(CharSequence constraint) {
-               FilterResults results=new FilterResults();
-               ArrayList<PlaceAutoComplete> queryResults;
-               if(constraint!=null && constraint.toString().trim().length()>0) {
-                   queryResults = getAutoComplete(constraint);
-                   if(queryResults!=null){
-                       results.values = queryResults;
-                       results.count = queryResults.size();
-                   }
-               }
-               // The API successfully returned results.
-               return  results;
-           }
-
-           @Override
-           protected void publishResults(CharSequence constraint, FilterResults results) {
-                if(results!=null&& results.count > 0){
-                    // The API returned at least one result, update the data.
-                    mResultList = (ArrayList<PlaceAutoComplete>) results.values;
-                    notifyDataSetChanged();
-                }else{
-                    // The API did not return any results, invalidate the data set.
-                    clearList();
+        return new Filter() {
+            @Override
+            protected FilterResults performFiltering(CharSequence constraint) {
+                FilterResults results=new FilterResults();
+                ArrayList<PlaceAutoComplete> queryResults;
+                if(constraint!=null && constraint.toString().trim().length()>0) {
+                    queryResults = getAutoComplete(constraint);
+                    if(queryResults!=null){
+                        results.values = queryResults;
+                        results.count = queryResults.size();
+                    }
                 }
-           }
-       };
-        return filter;
+                return  results;
+            }
+            @Override
+            protected void publishResults(CharSequence constraint, FilterResults results) {
+                if(results!=null&& results.count > 0){
+                    mResultList = (ArrayList<PlaceAutoComplete>) results.values;
+                }else{
+                    mResultList=null;
+                }
+                notifyDataSetChanged();
+            }
+        };
     }
 
     /**
@@ -180,18 +185,18 @@ public class AutoCompleteAdapter extends RecyclerView.Adapter<AutoCompleteAdapte
     public PredictionHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         LayoutInflater mLayoutInflater=(LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View convertView=mLayoutInflater.inflate(mLayout,parent,false);
-        PredictionHolder predictionHolder=new PredictionHolder(convertView);
-        return predictionHolder;
+
+        return  new PredictionHolder(convertView);
     }
 
     @Override
-    public void onBindViewHolder(PredictionHolder holder, final int position) {
+    public void onBindViewHolder(final PredictionHolder holder, int position) {
         holder.mAddress1.setText(mResultList.get(position).getPlaceAddress1());
         holder.mAddress2.setText(mResultList.get(position).getPlaceAddress2());
         holder.mPredictionLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPlaceClickInterface.onPlaceClick(mResultList,position);
+                mPlaceClickInterface.onPlaceClick(mResultList,holder.getAdapterPosition());
             }
         });
     }
@@ -200,13 +205,13 @@ public class AutoCompleteAdapter extends RecyclerView.Adapter<AutoCompleteAdapte
     public int getItemCount() {
         if(mResultList!=null){
             return mResultList.size();
-        }else{
+        } else {
             return 0;
         }
     }
 
     public PlaceAutoComplete getItem(int position) {
-            return mResultList.get(position);
+        return mResultList.get(position);
     }
 
 }
